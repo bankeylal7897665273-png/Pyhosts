@@ -1,21 +1,29 @@
 <!DOCTYPE html>
-<html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Dashboard</title>
+<html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Dashboard - NexusSpace</title>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 <style>
     body { background: #0b0f19; color: white; font-family: sans-serif; padding: 20px; margin: 0;}
     .nav { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 15px 20px; border-radius: 12px; margin-bottom: 30px; border-bottom: 2px solid #8b5cf6;}
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+    
+    /* CARDS */
     .card { background: #1e293b; padding: 25px; border-radius: 12px; cursor: pointer; border: 2px solid transparent; position: relative; transition: 0.3s;}
     .card:hover { border-color: #8b5cf6; transform: translateY(-3px);}
     .card h3 { margin: 0 0 10px 0; display: flex; align-items: center; gap: 10px;}
-    .status { font-size: 13px; font-weight: bold; padding: 4px 10px; border-radius: 20px; display: inline-block;}
-    .st-live { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid #10b981; }
-    .st-build { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid #f59e0b; }
-    .del-btn { position: absolute; top: 15px; right: 15px; color: #ef4444; font-size: 18px; cursor: pointer; z-index: 10;}
     
+    /* STATUS COLORS */
+    .status { font-size: 13px; font-weight: bold; padding: 5px 12px; border-radius: 20px; display: inline-block;}
+    .st-live { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid #10b981; } /* GREEN */
+    .st-build { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid #f59e0b; } /* YELLOW */
+    
+    /* DELETE BUTTON */
+    .del-btn { position: absolute; top: 15px; right: 15px; color: #ef4444; font-size: 18px; cursor: pointer; z-index: 10; padding: 5px;}
+    .del-btn:hover { color: #dc2626; transform: scale(1.1);}
+    
+    /* MODAL */
     #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 100;}
     .modal-box { background: #1e293b; padding: 30px; border-radius: 12px; width: 90%; max-width: 350px; text-align: center;}
-    input { width: 100%; padding: 14px; margin: 15px 0; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 8px; box-sizing: border-box; outline:none;}
+    input, select { width: 100%; padding: 14px; margin: 15px 0; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 8px; box-sizing: border-box; outline:none;}
     button { width: 100%; padding: 14px; background: #8b5cf6; border: none; font-weight: bold; font-size:16px; border-radius: 8px; cursor: pointer; color: white;}
     .loader { display: none; border: 3px solid transparent; border-top: 3px solid white; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; margin: 0 auto;}
     @keyframes spin { 100% { transform: rotate(360deg); } }
@@ -34,24 +42,32 @@
     <div class="grid">
         {% for name, data in spaces.items() %}
         <div class="card" onclick="window.location.href='/workspace/{{ name }}'">
+            <!-- REAL DELETE SPACE BUTTON -->
             <i class="fas fa-trash del-btn" onclick="event.stopPropagation(); deleteSpace('{{ name }}')"></i>
+            
             <h3><i class="fas fa-cube" style="color:{{ '#f59e0b' if data.type == 'python' else '#3b82f6' }}"></i> {{ name }}</h3>
+            
+            <!-- DYNAMIC STATUS: GREEN IF LIVE, YELLOW IF BUILDING -->
             <span class="status {{ 'st-live' if 'Live' in data.status else 'st-build' }}">{{ data.status }}</span>
-            <p style="color:#94a3b8; font-size:12px; margin-top:10px;">Type: {{ data.type | upper }}</p>
+            <p style="color:#94a3b8; font-size:12px; margin-top:10px; margin-bottom:0;">Type: {{ data.type | upper }}</p>
         </div>
         {% endfor %}
+        
+        {% if not spaces %}
+        <p style="color:#94a3b8;">No spaces found. Create your first space!</p>
+        {% endif %}
     </div>
 
     <div id="modal">
         <div class="modal-box">
-            <h3>Build New Space</h3>
-            <select id="s-type" style="width:100%; padding:14px; background:#0f172a; color:white; border:1px solid #334155; border-radius:8px;">
-                <option value="python">Python Container</option>
+            <h3 style="margin-top:0;">Build New Space</h3>
+            <select id="s-type">
+                <option value="python">Python Project</option>
                 <option value="html">HTML Website</option>
             </select>
-            <input type="text" id="s-name" placeholder="Unique name (rahul-app)">
+            <input type="text" id="s-name" placeholder="Unique name (e.g. rahul-app)">
             <button onclick="createSpace()" id="btn-create"><span id="btn-txt">Create Space</span> <div class="loader" id="ldr"></div></button>
-            <p onclick="document.getElementById('modal').style.display='none'" style="color:#ef4444; cursor:pointer; margin-top:20px;">Cancel</p>
+            <p onclick="document.getElementById('modal').style.display='none'" style="color:#ef4444; cursor:pointer; margin-top:20px; margin-bottom:0;">Cancel</p>
         </div>
     </div>
 
@@ -60,15 +76,20 @@
             const n = document.getElementById('s-name').value, t = document.getElementById('s-type').value;
             if(!n) return alert("Enter Name!");
             document.getElementById('btn-txt').style.display='none'; document.getElementById('ldr').style.display='block';
+            
             const res = await fetch('/api/create_space', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:n, type:t}) });
             const data = await res.json();
+            
             if(data.status==='success') window.location.href=`/workspace/${data.space}`;
             else { alert(data.message); document.getElementById('btn-txt').style.display='block'; document.getElementById('ldr').style.display='none'; }
         }
+        
         async function deleteSpace(name) {
-            if(!confirm("Delete this space permanently?")) return;
-            await fetch('/api/delete_space', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name}) });
-            window.location.reload();
+            if(!confirm("Are you sure? This will delete the space and ALL files inside it permanently.")) return;
+            const res = await fetch('/api/delete_space', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name}) });
+            const data = await res.json();
+            if(data.status === 'success') { window.location.reload(); }
+            else { alert("Failed to delete"); }
         }
     </script>
 </body></html>
