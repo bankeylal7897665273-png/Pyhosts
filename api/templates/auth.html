@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html><head><title>NexusSpace Cloud</title>
+<html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>NexusSpace Auth</title>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 <style>
-    body { background: #0b0f19; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin:0;}
-    .box { background: #1e293b; padding: 40px; border-radius: 12px; width: 320px; text-align: center; border-top: 4px solid #3b82f6; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    body { background: #0b0f19; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin:0; padding:20px;}
+    .box { background: #1e293b; padding: 30px; border-radius: 12px; width: 100%; max-width: 350px; text-align: center; border-top: 4px solid #8b5cf6; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .logo { font-size: 24px; font-weight: bold; color: #8b5cf6; margin-bottom: 20px;}
     input { width: 100%; padding: 14px; margin: 10px 0; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 8px; box-sizing: border-box; outline:none;}
-    input:focus { border-color: #3b82f6; }
-    button { width: 100%; padding: 14px; background: linear-gradient(90deg, #3b82f6, #8b5cf6); border: none; font-weight: bold; font-size:16px; border-radius: 8px; cursor: pointer; color: white; margin-top: 10px; display: flex; justify-content: center; align-items: center;}
+    input:focus { border-color: #8b5cf6; }
+    button { width: 100%; padding: 14px; background: #8b5cf6; border: none; font-weight: bold; font-size:16px; border-radius: 8px; cursor: pointer; color: white; margin-top: 10px; display: flex; justify-content: center; align-items: center;}
     .loader { display: none; border: 3px solid transparent; border-top: 3px solid white; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
-    
     #notify { position: fixed; top: 20px; right: 20px; z-index: 9999; }
     .popup { padding: 15px 25px; border-radius: 10px; margin-bottom: 10px; background: #1e293b; animation: slideIn 0.3s ease; border-left: 5px solid; font-weight: bold;}
     .popup.error { border-color: #ef4444; color: #ef4444; } .popup.success { border-color: #10b981; color: #10b981; }
@@ -17,17 +17,17 @@
 </style></head><body>
     <div id="notify"></div>
     <div class="box">
-        <h2 style="color:#3b82f6;"><i class="fas fa-cloud"></i> NexusSpace</h2>
-        <h3 id="title">Secure Login</h3>
+        <div class="logo"><i class="fas fa-layer-group"></i> NexusSpace</div>
+        <h3 id="title" style="margin-top:0;">Secure Console</h3>
         <input type="email" id="em" placeholder="Email Address">
         <input type="password" id="pw" placeholder="Password">
-        <button onclick="auth()" id="btn"><span id="btn-txt">Login to Console</span> <div class="loader" id="ldr"></div></button>
+        <button onclick="auth()" id="btn"><span id="btn-txt">Login</span> <div class="loader" id="ldr"></div></button>
         <p onclick="toggle()" style="color:#94a3b8; cursor:pointer; font-size:14px; margin-top:20px;">Switch to Register</p>
     </div>
     <script>
         function showMsg(m, t) { const b = document.getElementById('notify'); const n = document.createElement('div'); n.className = `popup ${t}`; n.innerHTML = m; b.appendChild(n); setTimeout(() => n.remove(), 4000); }
         let isLog = true;
-        function toggle() { isLog = !isLog; document.getElementById('title').innerText = isLog ? "Secure Login" : "Create Account"; document.getElementById('btn-txt').innerText = isLog ? "Login to Console" : "Sign Up"; }
+        function toggle() { isLog = !isLog; document.getElementById('title').innerText = isLog ? "Secure Console" : "Create Account"; document.getElementById('btn-txt').innerText = isLog ? "Login" : "Sign Up"; }
         
         async function auth() {
             const e = document.getElementById('em').value, p = document.getElementById('pw').value;
