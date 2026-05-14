@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html><head><title>{{ space }} - Workspace</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+    body { background: #0b0f19; color: white; font-family: sans-serif; padding: 20px; margin: 0;}
+    .header { background: #1e293b; padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-top: 4px solid #10b981;}
+    .logs { background: #000; color: #10b981; padding: 15px; border-radius: 8px; font-family: monospace; margin-bottom: 20px; border: 1px solid #334155;}
+    
+    .file-manager { background: #1e293b; border-radius: 12px; padding: 20px; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 15px; margin-bottom: 15px;}
+    
+    /* 3 DOTS MENU */
+    .dropdown { position: relative; display: inline-block; }
+    .dropbtn { background: #3b82f6; color: white; padding: 10px 15px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; }
+    .dropdown-content { display: none; position: absolute; right: 0; background-color: #0f172a; min-width: 160px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5); border-radius: 8px; z-index: 1; border: 1px solid #334155; overflow: hidden;}
+    .dropdown-content a { color: white; padding: 12px 16px; text-decoration: none; display: block; cursor: pointer;}
+    .dropdown-content a:hover { background-color: #3b82f6; }
+    .dropdown:hover .dropdown-content { display: block; }
+
+    .file-item { display: flex; justify-content: space-between; padding: 12px; background: #0f172a; margin-bottom: 8px; border-radius: 8px; align-items: center;}
+    .file-item:hover { border-left: 3px solid #3b82f6; }
+    
+    /* EDITOR UI */
+    #editor-ui { display: none; background: #1e293b; padding: 20px; border-radius: 12px; margin-top: 20px;}
+    input.path-input { width: 100%; padding: 14px; background: #000; border: 1px solid #3b82f6; color: white; border-radius: 8px; margin-bottom: 15px; font-family: monospace;}
+    textarea { width: 100%; height: 300px; background: #000; color: #fff; padding: 15px; font-family: monospace; border: 1px solid #334155; border-radius: 8px; box-sizing: border-box; resize: vertical;}
+    button.btn-deploy { width: 100%; padding: 15px; background: linear-gradient(90deg, #10b981, #059669); color: white; border: none; font-weight: bold; border-radius: 8px; margin-top: 15px; cursor: pointer;}
+</style></head><body>
+
+    <div class="header">
+        <div>
+            <h2 style="margin:0;"><i class="fas fa-rocket"></i> {{ space }} <span style="font-size:12px; background:#3b82f6; padding:3px 8px; border-radius:12px; vertical-align:middle;">{{ data.type | upper }}</span></h2>
+            <a href="{{ base_url }}/{{ space }}" target="_blank" style="color:#00d2ff; text-decoration:none; margin-top:5px; display:block;">{{ base_url }}/{{ space }} <i class="fas fa-external-link-alt"></i></a>
+        </div>
+        <button style="padding:10px 20px; background:#334155; border:none; color:white; border-radius:8px; cursor:pointer;" onclick="window.location.href='/dashboard'">Back to Dashboard</button>
+    </div>
+
+    <div class="logs" id="sys-logs">
+        > System Boot...<br>
+        > Space ID: {{ space }} loaded.<br>
+        > Current Status: {{ data.status }}
+    </div>
+
+    <!-- FILE MANAGER -->
+    <div class="file-manager" id="file-mgr">
+        <div class="toolbar">
+            <h3><i class="far fa-folder-open"></i> Space Files</h3>
+            <div class="dropdown">
+                <button class="dropbtn"><i class="fas fa-ellipsis-v"></i> Actions</button>
+                <div class="dropdown-content">
+                    <a onclick="openEditor('')"><i class="fas fa-file-code"></i> Create File</a>
+                    <a onclick="document.getElementById('file-upload').click()"><i class="fas fa-upload"></i> Upload File</a>
+                </div>
+                <input type="file" id="file-upload" style="display:none;" onchange="handleUpload(event)">
+            </div>
+        </div>
+
+        <div id="file-list">
+            {% for f in files %}
+            <div class="file-item">
+                <div><i class="far fa-file-code" style="color:#94a3b8; margin-right:10px;"></i> {{ f.path }}</div>
+                <div>
+                    <button style="background:transparent; border:none; color:#10b981; cursor:pointer;" onclick="downloadFile('{{ f.path }}', '{{ f.key }}')"><i class="fas fa-download"></i></button>
+                    <button style="background:transparent; border:none; color:#ef4444; cursor:pointer; margin-left:10px;" onclick="deleteFile('{{ f.key }}')"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+            {% endfor %}
+            {% if not files %}
+            <p style="color:#94a3b8; text-align:center; padding: 20px;">No files yet. Click Actions -> Create File.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- EDITOR / UPLOAD UI -->
+    <div id="editor-ui">
+        <h3><i class="fas fa-code"></i> Code Editor</h3>
+        <input type="text" id="file-path" class="path-input" placeholder="e.g. src/index.html (use / to create folders)">
+        <textarea id="file-content" placeholder="Write your code here..."></textarea>
+        <button class="btn-deploy" onclick="deployCode()"><i class="fas fa-play"></i> Deploy Code</button>
+        <button style="width:100%; padding:10px; background:transparent; border:1px solid #ef4444; color:#ef4444; margin-top:10px; border-radius:8px; cursor:pointer;" onclick="closeEditor()">Cancel</button>
+    </div>
+
+    <script>
+        function openEditor(path) {
+            document.getElementById('file-mgr').style.display = 'none';
+            document.getElementById('editor-ui').style.display = 'block';
+            document.getElementById('file-path').value = path;
+            if(!path) document.getElementById('file-content').value = "";
+        }
+        function closeEditor() {
+            document.getElementById('file-mgr').style.display = 'block';
+            document.getElementById('editor-ui').style.display = 'none';
+        }
+
+        function updateLog(msg) {
+            document.getElementById('sys-logs').innerHTML += `<br>> ${msg}`;
+        }
+
+        // Upload any file from PC/Mobile
+        function handleUpload(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+            updateLog(`Reading file: ${file.name}...`);
+            
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = async function() {
+                const base64Content = reader.result.split(',')[1]; // Get pure base64
+                await pushToServer(file.name, base64Content);
+            };
+        }
+
+        // Deploy from Editor
+        async function deployCode() {
+            const path = document.getElementById('file-path').value;
+            const content = document.getElementById('file-content').value;
+            if(!path) return alert("File path is required!");
+            
+            // Encode text to base64
+            const base64Content = btoa(unescape(encodeURIComponent(content)));
+            await pushToServer(path, base64Content);
+        }
+
+        async function pushToServer(path, base64Content) {
+            updateLog(`Deploying ${path}...`);
+            const res = await fetch('/api/save_file', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({space: "{{ space }}", path: path, content: base64Content})
+            });
+            const data = await res.json();
+            updateLog(data.message);
+            if(data.status === 'success') {
+                setTimeout(() => window.location.reload(), 1000);
+            }
+        }
+
+        async function deleteFile(key) {
+            if(!confirm("Delete this file?")) return;
+            updateLog(`Deleting file...`);
+            await fetch('/api/delete_file', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({space: "{{ space }}", key: key})
+            });
+            window.location.reload();
+        }
+
+        function downloadFile(path, key) {
+            window.open(`/{{ space }}/${path}`, '_blank');
+        }
+    </script>
+</body></html>
