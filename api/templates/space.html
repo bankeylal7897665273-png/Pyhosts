@@ -1,127 +1,161 @@
 <!DOCTYPE html>
-<html><head><title>{{ space }} - Workspace</title>
+<html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>{{ space }} - Workspace</title>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 <style>
-    body { background: #0b0f19; color: white; font-family: sans-serif; padding: 20px; margin: 0;}
-    .header { background: #1e293b; padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-top: 4px solid #10b981;}
-    .logs { background: #000; color: #10b981; padding: 15px; border-radius: 8px; font-family: monospace; margin-bottom: 20px; border: 1px solid #334155;}
+    body { background: #0b0f19; color: white; font-family: sans-serif; padding: 0; margin: 0;}
     
+    /* HEADER & HAMBURGER MENU */
+    .header { background: #1e293b; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #8b5cf6; position:sticky; top:0; z-index: 50;}
+    .logo { font-size: 20px; font-weight: bold; color: #8b5cf6; display:flex; align-items:center;}
+    .menu-icon { font-size: 24px; cursor: pointer; color: white; }
+    
+    #side-menu { display: none; background: #0f172a; position: fixed; top: 60px; right: 0; width: 250px; height: 100vh; box-shadow: -5px 0 15px rgba(0,0,0,0.5); z-index: 40;}
+    #side-menu a { display: block; padding: 15px 20px; color: white; text-decoration: none; border-bottom: 1px solid #1e293b; font-size: 16px;}
+    #side-menu a:hover { background: #8b5cf6; }
+
+    .container { padding: 20px; max-width: 1000px; margin: auto; }
+    
+    /* LIVE LINK BOX */
+    #link-box { display: none; background: #1e293b; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px; border: 1px solid #334155;}
+    .live-url { font-size: 18px; color: #10b981; text-decoration: none; word-break: break-all;}
+
+    /* FILE MANAGER */
+    .logs { background: #000; color: #10b981; padding: 15px; border-radius: 8px; font-family: monospace; margin-bottom: 20px; border: 1px solid #334155; font-size: 12px; max-height: 150px; overflow-y: auto;}
     .file-manager { background: #1e293b; border-radius: 12px; padding: 20px; }
     .toolbar { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 15px; margin-bottom: 15px;}
-    
-    /* 3 DOTS MENU */
-    .dropdown { position: relative; display: inline-block; }
-    .dropbtn { background: #3b82f6; color: white; padding: 10px 15px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; }
-    .dropdown-content { display: none; position: absolute; right: 0; background-color: #0f172a; min-width: 160px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5); border-radius: 8px; z-index: 1; border: 1px solid #334155; overflow: hidden;}
-    .dropdown-content a { color: white; padding: 12px 16px; text-decoration: none; display: block; cursor: pointer;}
-    .dropdown-content a:hover { background-color: #3b82f6; }
-    .dropdown:hover .dropdown-content { display: block; }
+    .btn-action { background: #8b5cf6; color: white; padding: 10px 15px; font-size: 14px; border: none; border-radius: 8px; cursor: pointer; margin-left: 5px;}
 
-    .file-item { display: flex; justify-content: space-between; padding: 12px; background: #0f172a; margin-bottom: 8px; border-radius: 8px; align-items: center;}
-    .file-item:hover { border-left: 3px solid #3b82f6; }
+    .file-item { display: flex; justify-content: space-between; padding: 12px; background: #0f172a; margin-bottom: 8px; border-radius: 8px; align-items: center; word-break: break-all;}
+    .file-item:hover { border-left: 3px solid #8b5cf6; }
     
     /* EDITOR UI */
     #editor-ui { display: none; background: #1e293b; padding: 20px; border-radius: 12px; margin-top: 20px;}
-    input.path-input { width: 100%; padding: 14px; background: #000; border: 1px solid #3b82f6; color: white; border-radius: 8px; margin-bottom: 15px; font-family: monospace;}
+    input.path-input { width: 100%; padding: 14px; background: #000; border: 1px solid #8b5cf6; color: white; border-radius: 8px; margin-bottom: 15px; font-family: monospace; box-sizing: border-box;}
     textarea { width: 100%; height: 300px; background: #000; color: #fff; padding: 15px; font-family: monospace; border: 1px solid #334155; border-radius: 8px; box-sizing: border-box; resize: vertical;}
-    button.btn-deploy { width: 100%; padding: 15px; background: linear-gradient(90deg, #10b981, #059669); color: white; border: none; font-weight: bold; border-radius: 8px; margin-top: 15px; cursor: pointer;}
+    button.btn-deploy { width: 100%; padding: 15px; background: #10b981; color: white; border: none; font-weight: bold; border-radius: 8px; margin-top: 15px; cursor: pointer; font-size:16px;}
 </style></head><body>
 
     <div class="header">
-        <div>
-            <h2 style="margin:0;"><i class="fas fa-rocket"></i> {{ space }} <span style="font-size:12px; background:#3b82f6; padding:3px 8px; border-radius:12px; vertical-align:middle;">{{ data.type | upper }}</span></h2>
-            <a href="{{ base_url }}/{{ space }}" target="_blank" style="color:#00d2ff; text-decoration:none; margin-top:5px; display:block;">{{ base_url }}/{{ space }} <i class="fas fa-external-link-alt"></i></a>
-        </div>
-        <button style="padding:10px 20px; background:#334155; border:none; color:white; border-radius:8px; cursor:pointer;" onclick="window.location.href='/dashboard'">Back to Dashboard</button>
+        <div class="logo"><i class="fas fa-layer-group" style="margin-right:10px;"></i> {{ space }}</div>
+        <i class="fas fa-bars menu-icon" onclick="toggleMenu()"></i>
     </div>
 
-    <div class="logs" id="sys-logs">
-        > System Boot...<br>
-        > Space ID: {{ space }} loaded.<br>
-        > Current Status: {{ data.status }}
+    <div id="side-menu">
+        <a onclick="showSection('file-mgr')"><i class="fas fa-folder-open"></i> File Manager</a>
+        <a onclick="showSection('link-box')"><i class="fas fa-link"></i> Live Link</a>
+        <a href="/dashboard"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
     </div>
 
-    <!-- FILE MANAGER -->
-    <div class="file-manager" id="file-mgr">
-        <div class="toolbar">
-            <h3><i class="far fa-folder-open"></i> Space Files</h3>
-            <div class="dropdown">
-                <button class="dropbtn"><i class="fas fa-ellipsis-v"></i> Actions</button>
-                <div class="dropdown-content">
-                    <a onclick="openEditor('')"><i class="fas fa-file-code"></i> Create File</a>
-                    <a onclick="document.getElementById('file-upload').click()"><i class="fas fa-upload"></i> Upload File</a>
-                </div>
-                <input type="file" id="file-upload" style="display:none;" onchange="handleUpload(event)">
-            </div>
+    <div class="container">
+        <div id="link-box">
+            <h3 style="margin-top:0;">Your App is Live At:</h3>
+            <a href="{{ base_url }}/{{ space }}" target="_blank" class="live-url">{{ base_url }}/{{ space }}</a>
+            <p style="color:#94a3b8; font-size:14px; margin-top:15px;">Share this link with anyone.</p>
         </div>
 
-        <div id="file-list">
-            {% for f in files %}
-            <div class="file-item">
-                <div><i class="far fa-file-code" style="color:#94a3b8; margin-right:10px;"></i> {{ f.path }}</div>
+        <div class="logs" id="sys-logs">
+            > System Booting...<br>
+            > Space: {{ space }} ({{ data.type | upper }})<br>
+            > Status: {{ data.status }}
+        </div>
+
+        <div class="file-manager" id="file-mgr">
+            <div class="toolbar">
+                <h3 style="margin:0; font-size:16px;"><i class="far fa-folder"></i> Files</h3>
                 <div>
-                    <button style="background:transparent; border:none; color:#10b981; cursor:pointer;" onclick="downloadFile('{{ f.path }}', '{{ f.key }}')"><i class="fas fa-download"></i></button>
-                    <button style="background:transparent; border:none; color:#ef4444; cursor:pointer; margin-left:10px;" onclick="deleteFile('{{ f.key }}')"><i class="fas fa-trash"></i></button>
+                    <button class="btn-action" onclick="openEditor('')"><i class="fas fa-plus"></i></button>
+                    <button class="btn-action" onclick="document.getElementById('file-upload').click()"><i class="fas fa-upload"></i> Upload</button>
                 </div>
+                <input type="file" id="file-upload" multiple style="display:none;" onchange="handleMultiUpload(event)">
             </div>
-            {% endfor %}
-            {% if not files %}
-            <p style="color:#94a3b8; text-align:center; padding: 20px;">No files yet. Click Actions -> Create File.</p>
-            {% endif %}
-        </div>
-    </div>
 
-    <!-- EDITOR / UPLOAD UI -->
-    <div id="editor-ui">
-        <h3><i class="fas fa-code"></i> Code Editor</h3>
-        <input type="text" id="file-path" class="path-input" placeholder="e.g. src/index.html (use / to create folders)">
-        <textarea id="file-content" placeholder="Write your code here..."></textarea>
-        <button class="btn-deploy" onclick="deployCode()"><i class="fas fa-play"></i> Deploy Code</button>
-        <button style="width:100%; padding:10px; background:transparent; border:1px solid #ef4444; color:#ef4444; margin-top:10px; border-radius:8px; cursor:pointer;" onclick="closeEditor()">Cancel</button>
+            <div id="file-list">
+                {% for f in files %}
+                <div class="file-item">
+                    <div style="font-size:14px;"><i class="far fa-file-code" style="color:#94a3b8; margin-right:10px;"></i> {{ f.path }}</div>
+                    <div style="display:flex;">
+                        <button style="background:transparent; border:none; color:#10b981; cursor:pointer; padding:5px;" onclick="window.open('/{{ space }}/{{ f.path }}', '_blank')"><i class="fas fa-eye"></i></button>
+                        <button style="background:transparent; border:none; color:#ef4444; cursor:pointer; padding:5px; margin-left:5px;" onclick="deleteFile('{{ f.key }}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+                {% endfor %}
+                {% if not files %}
+                <p style="color:#94a3b8; text-align:center; padding: 20px; font-size:14px;">No files yet. Upload or Create one!</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div id="editor-ui">
+            <h3 style="margin-top:0;"><i class="fas fa-code"></i> Code Editor</h3>
+            <input type="text" id="file-path" class="path-input" placeholder="e.g. index.html or folder/app.py">
+            <textarea id="file-content" placeholder="Write your code here..."></textarea>
+            <button class="btn-deploy" onclick="deployCode()"><i class="fas fa-play"></i> Deploy Code</button>
+            <button style="width:100%; padding:15px; background:transparent; border:1px solid #ef4444; color:#ef4444; margin-top:10px; border-radius:8px; cursor:pointer; font-size:16px;" onclick="closeEditor()">Cancel</button>
+        </div>
     </div>
 
     <script>
+        function toggleMenu() {
+            const m = document.getElementById('side-menu');
+            m.style.display = m.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function showSection(id) {
+            document.getElementById('file-mgr').style.display = 'none';
+            document.getElementById('link-box').style.display = 'none';
+            document.getElementById('editor-ui').style.display = 'none';
+            document.getElementById(id).style.display = 'block';
+            toggleMenu();
+        }
+
         function openEditor(path) {
             document.getElementById('file-mgr').style.display = 'none';
             document.getElementById('editor-ui').style.display = 'block';
             document.getElementById('file-path').value = path;
             if(!path) document.getElementById('file-content').value = "";
         }
-        function closeEditor() {
-            document.getElementById('file-mgr').style.display = 'block';
-            document.getElementById('editor-ui').style.display = 'none';
-        }
+        function closeEditor() { showSection('file-mgr'); }
 
         function updateLog(msg) {
-            document.getElementById('sys-logs').innerHTML += `<br>> ${msg}`;
+            const logBox = document.getElementById('sys-logs');
+            logBox.innerHTML += `<br>> ${msg}`;
+            logBox.scrollTop = logBox.scrollHeight;
         }
 
-        // Upload any file from PC/Mobile
-        function handleUpload(event) {
-            const file = event.target.files[0];
-            if(!file) return;
-            updateLog(`Reading file: ${file.name}...`);
+        // MULTI FILE UPLOAD LOGIC
+        async function handleMultiUpload(event) {
+            const files = event.target.files;
+            if(files.length === 0) return;
             
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = async function() {
-                const base64Content = reader.result.split(',')[1]; // Get pure base64
-                await pushToServer(file.name, base64Content);
-            };
+            for(let i=0; i<files.length; i++) {
+                let file = files[i];
+                updateLog(`Reading ${file.name}...`);
+                let base64 = await toBase64(file);
+                await pushToServer(file.name, base64, false);
+            }
+            updateLog(`All files deployed! Reloading Workspace...`);
+            setTimeout(() => window.location.reload(), 1500);
         }
 
-        // Deploy from Editor
+        function toBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = error => reject(error);
+            });
+        }
+
         async function deployCode() {
             const path = document.getElementById('file-path').value;
             const content = document.getElementById('file-content').value;
             if(!path) return alert("File path is required!");
             
-            // Encode text to base64
             const base64Content = btoa(unescape(encodeURIComponent(content)));
-            await pushToServer(path, base64Content);
+            await pushToServer(path, base64Content, true);
         }
 
-        async function pushToServer(path, base64Content) {
+        async function pushToServer(path, base64Content, reload=false) {
             updateLog(`Deploying ${path}...`);
             const res = await fetch('/api/save_file', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -129,23 +163,19 @@
             });
             const data = await res.json();
             updateLog(data.message);
-            if(data.status === 'success') {
+            if(reload && data.status === 'success') {
                 setTimeout(() => window.location.reload(), 1000);
             }
         }
 
         async function deleteFile(key) {
-            if(!confirm("Delete this file?")) return;
+            if(!confirm("Delete this file permanently?")) return;
             updateLog(`Deleting file...`);
             await fetch('/api/delete_file', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({space: "{{ space }}", key: key})
             });
             window.location.reload();
-        }
-
-        function downloadFile(path, key) {
-            window.open(`/{{ space }}/${path}`, '_blank');
         }
     </script>
 </body></html>
