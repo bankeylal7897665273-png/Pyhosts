@@ -14,7 +14,6 @@ app.secret_key = os.getenv("SECRET_KEY", "NexusSpace_Secure_100")
 API_KEY = os.getenv("FIREBASE_API_KEY")
 DB_URL = os.getenv("FIREBASE_DATABASE_URL")
 
-# --- FIREBASE REST HELPERS ---
 def firebase_auth(email, password, is_login=True):
     endpoint = "signInWithPassword" if is_login else "signUp"
     url = f"https://identitytoolkit.googleapis.com/v1/accounts:{endpoint}?key={API_KEY}"
@@ -34,11 +33,9 @@ def db_patch(path, data):
 def db_delete(path):
     requests.delete(f"{DB_URL}/{path}.json")
 
-# Encode path for safe Firebase Key
 def encode_path(path):
     return base64.urlsafe_b64encode(path.encode()).decode().rstrip('=')
 
-# --- MAIN APP ROUTES ---
 @app.route('/')
 def home():
     if 'uid' in session: return redirect('/dashboard')
@@ -54,8 +51,7 @@ def auth():
         uid = res['localId']
         session['uid'] = uid
         session.modified = True
-        if not is_login: 
-            db_put(f"users/{uid}", {"email": data.get('email')})
+        if not is_login: db_put(f"users/{uid}", {"email": data.get('email')})
         return jsonify({"status": "success"})
     return jsonify({"status": "error", "message": res.get("error", {}).get("message", "Auth Failed")})
 
@@ -70,30 +66,25 @@ def dashboard():
 @app.route('/api/create_space', methods=['POST'])
 def create_space():
     if 'uid' not in session: return jsonify({"error": "Unauthorized"}), 401
-    name = request.json.get('name').lower().strip() # BUG FIXED: Lowercase mapping
+    name = request.json.get('name').lower().strip()
     type_ = request.json.get('type')
     
     if name in ['api', 'dashboard', 'static', 'admin', 'auth', 'workspace', 'checkout']:
         return jsonify({"status": "error", "message": "Reserved name!"})
-        
     if db_get(f"spaces/{name}"):
         return jsonify({"status": "error", "message": "Space name already taken!"})
         
-    db_put(f"spaces/{name}", {"uid": session['uid'], "type": type_, "status": "Running 🟢", "created": int(time.time())})
-    return jsonify({"status": "success", "space": name}) # Returning exact name for redirect
+    db_put(f"spaces/{name}", {"uid": session['uid'], "type": type_, "status": "Building ⏳", "created": int(time.time())})
+    return jsonify({"status": "success", "space": name})
 
-# --- FILE MANAGER WORKSPACE ---
 @app.route('/workspace/<space_name>')
 def workspace(space_name):
     if 'uid' not in session: return redirect('/')
     space_data = db_get(f"spaces/{space_name}")
-    
-    if not space_data or space_data['uid'] != session['uid']:
-        return "Unauthorized or Space Not Found. Please create it first.", 404
+    if not space_data or space_data['uid'] != session['uid']: return "Unauthorized", 404
         
     files = db_get(f"space_files/{space_name}") or {}
     file_list = [{"path": v['path'], "key": k} for k, v in files.items()]
-    
     return render_template('space.html', space=space_name, data=space_data, files=file_list, base_url=request.host_url.rstrip('/'))
 
 @app.route('/api/save_file', methods=['POST'])
@@ -102,26 +93,33 @@ def save_file():
     data = request.json
     space = data.get('space')
     path = data.get('path').strip('/')
-    content = data.get('content') # Base64 encoded
+    content = data.get('content')
     
     safe_key = encode_path(path)
     db_put(f"space_files/{space}/{safe_key}", {
-        "path": path,
-        "content": content,
-        "updated": int(time.time())
+        "path": path, "content": content, "updated": int(time.time())
     })
-    db_patch(f"spaces/{space}", {"status": "Updated & Live 🟢"})
     return jsonify({"status": "success", "message": f"Deployed {path}!"})
 
 @app.route('/api/delete_file', methods=['POST'])
 def delete_file():
     if 'uid' not in session: return jsonify({"error": "Unauthorized"}), 401
-    space = request.json.get('space')
-    key = request.json.get('key')
-    db_delete(f"space_files/{space}/{key}")
-    return jsonify({"status": "success", "message": "File deleted."})
+    try:
+        space = request.json.get('space')
+        key = request.json.get('key')
+        db_delete(f"space_files/{space}/{key}")
+        return jsonify({"status": "success", "message": "File deleted."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
 
-# --- LIVE HOSTING SYSTEM ---
+@app.route('/api/update_status', methods=['POST'])
+def update_status():
+    if 'uid' not in session: return jsonify({"error": "Unauthorized"}), 401
+    space = request.json.get('space')
+    status = request.json.get('status')
+    db_patch(f"spaces/{space}", {"status": status})
+    return jsonify({"status": "success"})
+
 @app.route('/<space_name>')
 @app.route('/<space_name>/<path:file_path>')
 def serve_file(space_name, file_path="index.html"):
@@ -133,13 +131,12 @@ def serve_file(space_name, file_path="index.html"):
     
     if not file_data and file_path == "index.html":
         file_data = db_get(f"space_files/{space_name}/{encode_path('main.py')}")
+        if not file_data: file_data = db_get(f"space_files/{space_name}/{encode_path('app.py')}")
 
     if file_data:
         content = base64.b64decode(file_data['content'])
         mime_type, _ = mimetypes.guess_type(file_path)
-        if file_data['path'].endswith('.py'):
-            mime_type = "text/plain"
-            
+        if file_data['path'].endswith('.py'): mime_type = "text/plain"
         return Response(content, mimetype=mime_type or "text/html")
         
     return f"404 File '{file_path}' Not Found", 404
