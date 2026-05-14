@@ -9,17 +9,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "NexusSpace_Secure_100")
+app.secret_key = os.getenv("SECRET_KEY", "Nexus_Ultimate_Secret_2026")
 
 API_KEY = os.getenv("FIREBASE_API_KEY")
 DB_URL = os.getenv("FIREBASE_DATABASE_URL")
 
-def firebase_auth(email, password, is_login=True):
-    endpoint = "signInWithPassword" if is_login else "signUp"
-    url = f"https://identitytoolkit.googleapis.com/v1/accounts:{endpoint}?key={API_KEY}"
-    res = requests.post(url, json={"email": email, "password": password, "returnSecureToken": True})
-    return res.json()
-
+# --- FIREBASE REST HELPERS ---
 def db_get(path):
     res = requests.get(f"{DB_URL}/{path}.json")
     return res.json() if res.ok else None
@@ -36,6 +31,7 @@ def db_delete(path):
 def encode_path(path):
     return base64.urlsafe_b64encode(path.encode()).decode().rstrip('=')
 
+# --- ROUTES ---
 @app.route('/')
 def home():
     if 'uid' in session: return redirect('/dashboard')
@@ -44,102 +40,68 @@ def home():
 @app.route('/api/auth', methods=['POST'])
 def auth():
     data = request.json
-    is_login = data.get('action') == 'login'
-    res = firebase_auth(data.get('email'), data.get('password'), is_login)
-    
+    url = f"https://identitytoolkit.googleapis.com/v1/accounts:{'signInWithPassword' if data.get('action') == 'login' else 'signUp'}?key={API_KEY}"
+    res = requests.post(url, json={"email": data.get('email'), "password": data.get('password'), "returnSecureToken": True}).json()
     if 'idToken' in res:
-        uid = res['localId']
-        session['uid'] = uid
-        session.modified = True
-        if not is_login: db_put(f"users/{uid}", {"email": data.get('email')})
+        session['uid'] = res['localId']
+        if data.get('action') != 'login': db_put(f"users/{res['localId']}", {"email": data.get('email')})
         return jsonify({"status": "success"})
-    return jsonify({"status": "error", "message": res.get("error", {}).get("message", "Auth Failed")})
+    return jsonify({"status": "error", "message": "Auth Failed"})
 
 @app.route('/dashboard')
 def dashboard():
     if 'uid' not in session: return redirect('/')
-    uid = session['uid']
     all_spaces = db_get("spaces") or {}
-    my_spaces = {k: v for k, v in all_spaces.items() if v.get('uid') == uid}
+    my_spaces = {k: v for k, v in all_spaces.items() if v.get('uid') == session['uid']}
     return render_template('dashboard.html', spaces=my_spaces)
 
 @app.route('/api/create_space', methods=['POST'])
 def create_space():
-    if 'uid' not in session: return jsonify({"error": "Unauthorized"}), 401
     name = request.json.get('name').lower().strip()
-    type_ = request.json.get('type')
-    
-    if name in ['api', 'dashboard', 'static', 'admin', 'auth', 'workspace', 'checkout']:
-        return jsonify({"status": "error", "message": "Reserved name!"})
-    if db_get(f"spaces/{name}"):
-        return jsonify({"status": "error", "message": "Space name already taken!"})
-        
-    db_put(f"spaces/{name}", {"uid": session['uid'], "type": type_, "status": "Building ⏳", "created": int(time.time())})
+    if db_get(f"spaces/{name}"): return jsonify({"status": "error", "message": "Name taken!"})
+    db_put(f"spaces/{name}", {"uid": session['uid'], "type": request.json.get('type'), "status": "Building ⏳", "created": int(time.time())})
     return jsonify({"status": "success", "space": name})
+
+@app.route('/api/delete_space', methods=['POST'])
+def delete_space():
+    name = request.json.get('name')
+    space_data = db_get(f"spaces/{name}")
+    if space_data and space_data['uid'] == session['uid']:
+        db_delete(f"spaces/{name}")
+        db_delete(f"space_files/{name}")
+        return jsonify({"status": "success"})
+    return jsonify({"status": "error"})
 
 @app.route('/workspace/<space_name>')
 def workspace(space_name):
     if 'uid' not in session: return redirect('/')
-    space_data = db_get(f"spaces/{space_name}")
-    if not space_data or space_data['uid'] != session['uid']: return "Unauthorized", 404
-        
-    files = db_get(f"space_files/{space_name}") or {}
-    file_list = [{"path": v['path'], "key": k} for k, v in files.items()]
-    return render_template('space.html', space=space_name, data=space_data, files=file_list, base_url=request.host_url.rstrip('/'))
+    data = db_get(f"spaces/{space_name}")
+    if not data or data['uid'] != session['uid']: return "Unauthorized", 404
+    files_data = db_get(f"space_files/{space_name}") or {}
+    file_list = [{"path": v['path'], "key": k} for k, v in files_data.items()]
+    return render_template('space.html', space=space_name, data=data, files=file_list, base_url=request.host_url.rstrip('/'))
 
 @app.route('/api/save_file', methods=['POST'])
 def save_file():
-    if 'uid' not in session: return jsonify({"error": "Unauthorized"}), 401
-    data = request.json
-    space = data.get('space')
-    path = data.get('path').strip('/')
-    content = data.get('content')
-    
-    safe_key = encode_path(path)
-    db_put(f"space_files/{space}/{safe_key}", {
-        "path": path, "content": content, "updated": int(time.time())
-    })
-    return jsonify({"status": "success", "message": f"Deployed {path}!"})
+    space, path, content = request.json.get('space'), request.json.get('path'), request.json.get('content')
+    db_put(f"space_files/{space}/{encode_path(path)}", {"path": path, "content": content})
+    db_patch(f"spaces/{space}", {"status": "Live 🟢"})
+    return jsonify({"status": "success"})
 
 @app.route('/api/delete_file', methods=['POST'])
 def delete_file():
-    if 'uid' not in session: return jsonify({"error": "Unauthorized"}), 401
-    try:
-        space = request.json.get('space')
-        key = request.json.get('key')
-        db_delete(f"space_files/{space}/{key}")
-        return jsonify({"status": "success", "message": "File deleted."})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)})
-
-@app.route('/api/update_status', methods=['POST'])
-def update_status():
-    if 'uid' not in session: return jsonify({"error": "Unauthorized"}), 401
-    space = request.json.get('space')
-    status = request.json.get('status')
-    db_patch(f"spaces/{space}", {"status": status})
+    db_delete(f"space_files/{request.json.get('space')}/{request.json.get('key')}")
     return jsonify({"status": "success"})
 
 @app.route('/<space_name>')
 @app.route('/<space_name>/<path:file_path>')
-def serve_file(space_name, file_path="index.html"):
-    space_data = db_get(f"spaces/{space_name}")
-    if not space_data: return f"<h1>404 Space Not Found</h1>", 404
-    
-    safe_key = encode_path(file_path)
-    file_data = db_get(f"space_files/{space_name}/{safe_key}")
-    
+def serve(space_name, file_path="index.html"):
+    file_data = db_get(f"space_files/{space_name}/{encode_path(file_path)}")
     if not file_data and file_path == "index.html":
-        file_data = db_get(f"space_files/{space_name}/{encode_path('main.py')}")
-        if not file_data: file_data = db_get(f"space_files/{space_name}/{encode_path('app.py')}")
-
+        for p in ['main.py', 'app.py']:
+            file_data = db_get(f"space_files/{space_name}/{encode_path(p)}")
+            if file_data: break
     if file_data:
-        content = base64.b64decode(file_data['content'])
-        mime_type, _ = mimetypes.guess_type(file_path)
-        if file_data['path'].endswith('.py'): mime_type = "text/plain"
-        return Response(content, mimetype=mime_type or "text/html")
-        
-    return f"404 File '{file_path}' Not Found", 404
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+        mime = mimetypes.guess_type(file_data['path'])[0] or "text/html"
+        return Response(base64.b64decode(file_data['content']), mimetype=mime)
+    return "404 Not Found", 404
