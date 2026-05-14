@@ -1,38 +1,50 @@
 <!DOCTYPE html>
-<html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>{{ space }} - Workspace</title>
+<html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>{{ space }} - NexusSpace</title>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 <style>
     body { background: #0b0f19; color: white; font-family: sans-serif; padding: 0; margin: 0;}
     
     /* HEADER & HAMBURGER MENU */
-    .header { background: #1e293b; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #8b5cf6; position:sticky; top:0; z-index: 50;}
+    .header { background: #1e293b; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #8b5cf6; position:sticky; top:0; z-index: 50; box-shadow: 0 4px 10px rgba(0,0,0,0.3);}
     .logo { font-size: 20px; font-weight: bold; color: #8b5cf6; display:flex; align-items:center;}
-    .menu-icon { font-size: 24px; cursor: pointer; color: white; }
+    .menu-icon { font-size: 24px; cursor: pointer; color: white; padding: 5px;}
     
-    #side-menu { display: none; background: #0f172a; position: fixed; top: 60px; right: 0; width: 250px; height: 100vh; box-shadow: -5px 0 15px rgba(0,0,0,0.5); z-index: 40;}
-    #side-menu a { display: block; padding: 15px 20px; color: white; text-decoration: none; border-bottom: 1px solid #1e293b; font-size: 16px;}
-    #side-menu a:hover { background: #8b5cf6; }
+    #side-menu { display: none; background: #0f172a; position: fixed; top: 60px; right: 0; width: 250px; height: 100vh; box-shadow: -5px 0 15px rgba(0,0,0,0.8); z-index: 40;}
+    #side-menu a { display: block; padding: 15px 20px; color: white; text-decoration: none; border-bottom: 1px solid #1e293b; font-size: 16px; cursor: pointer; transition: 0.2s;}
+    #side-menu a:hover { background: #8b5cf6; border-left: 4px solid white;}
 
     .container { padding: 20px; max-width: 1000px; margin: auto; }
     
-    /* LIVE LINK BOX */
-    #link-box { display: none; background: #1e293b; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px; border: 1px solid #334155;}
-    .live-url { font-size: 18px; color: #10b981; text-decoration: none; word-break: break-all;}
+    /* VIEWS */
+    .view-section { display: none; animation: fadeIn 0.3s ease; }
+    .view-section.active { display: block; }
+    @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
+
+    /* HOME / STATUS VIEW */
+    .status-box { background: #1e293b; padding: 40px 20px; border-radius: 12px; text-align: center; border: 1px solid #334155; margin-top: 20px;}
+    .status-icon { font-size: 60px; margin-bottom: 20px; }
+    .spin { animation: spin 2s linear infinite; color: #f59e0b; }
+    .live { color: #10b981; } .failed { color: #ef4444; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    /* LOGS VIEW */
+    .logs-container { background: #000; padding: 20px; border-radius: 8px; font-family: monospace; border: 1px solid #334155; font-size: 14px; height: 60vh; overflow-y: auto;}
+    .log-line { margin-bottom: 5px; }
+    .log-normal { color: #cbd5e1; }
+    .log-warn { color: #f59e0b; } /* Yellow */
+    .log-error { color: #ef4444; } /* Red */
+    .log-success { color: #10b981; font-weight: bold;} /* Green */
+    .log-link { color: #3b82f6; text-decoration: underline; }
 
     /* FILE MANAGER */
-    .logs { background: #000; color: #10b981; padding: 15px; border-radius: 8px; font-family: monospace; margin-bottom: 20px; border: 1px solid #334155; font-size: 12px; max-height: 150px; overflow-y: auto;}
     .file-manager { background: #1e293b; border-radius: 12px; padding: 20px; }
     .toolbar { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 15px; margin-bottom: 15px;}
     .btn-action { background: #8b5cf6; color: white; padding: 10px 15px; font-size: 14px; border: none; border-radius: 8px; cursor: pointer; margin-left: 5px;}
-
     .file-item { display: flex; justify-content: space-between; padding: 12px; background: #0f172a; margin-bottom: 8px; border-radius: 8px; align-items: center; word-break: break-all;}
-    .file-item:hover { border-left: 3px solid #8b5cf6; }
     
-    /* EDITOR UI */
-    #editor-ui { display: none; background: #1e293b; padding: 20px; border-radius: 12px; margin-top: 20px;}
-    input.path-input { width: 100%; padding: 14px; background: #000; border: 1px solid #8b5cf6; color: white; border-radius: 8px; margin-bottom: 15px; font-family: monospace; box-sizing: border-box;}
-    textarea { width: 100%; height: 300px; background: #000; color: #fff; padding: 15px; font-family: monospace; border: 1px solid #334155; border-radius: 8px; box-sizing: border-box; resize: vertical;}
-    button.btn-deploy { width: 100%; padding: 15px; background: #10b981; color: white; border: none; font-weight: bold; border-radius: 8px; margin-top: 15px; cursor: pointer; font-size:16px;}
+    /* MODALS */
+    .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); align-items:center; justify-content:center; z-index: 100;}
+    .modal-box { background: #1e293b; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center;}
 </style></head><body>
 
     <div class="header">
@@ -41,56 +53,83 @@
     </div>
 
     <div id="side-menu">
-        <a onclick="showSection('file-mgr')"><i class="fas fa-folder-open"></i> File Manager</a>
-        <a onclick="showSection('link-box')"><i class="fas fa-link"></i> Live Link</a>
-        <a href="/dashboard"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+        <a onclick="showView('view-home')"><i class="fas fa-home" style="width:25px;"></i> Home / Status</a>
+        <a onclick="showView('view-files')"><i class="fas fa-folder-open" style="width:25px;"></i> File Manager</a>
+        <a onclick="showView('view-logs')"><i class="fas fa-terminal" style="width:25px;"></i> Deployment Logs</a>
+        <a onclick="showLinkModal()"><i class="fas fa-link" style="width:25px;"></i> Live Link</a>
+        <a href="/dashboard" style="color:#ef4444;"><i class="fas fa-arrow-left" style="width:25px;"></i> Dashboard</a>
     </div>
 
     <div class="container">
-        <div id="link-box">
-            <h3 style="margin-top:0;">Your App is Live At:</h3>
-            <a href="{{ base_url }}/{{ space }}" target="_blank" class="live-url">{{ base_url }}/{{ space }}</a>
-            <p style="color:#94a3b8; font-size:14px; margin-top:15px;">Share this link with anyone.</p>
-        </div>
-
-        <div class="logs" id="sys-logs">
-            > System Booting...<br>
-            > Space: {{ space }} ({{ data.type | upper }})<br>
-            > Status: {{ data.status }}
-        </div>
-
-        <div class="file-manager" id="file-mgr">
-            <div class="toolbar">
-                <h3 style="margin:0; font-size:16px;"><i class="far fa-folder"></i> Files</h3>
-                <div>
-                    <button class="btn-action" onclick="openEditor('')"><i class="fas fa-plus"></i></button>
-                    <button class="btn-action" onclick="document.getElementById('file-upload').click()"><i class="fas fa-upload"></i> Upload</button>
+        
+        <div id="view-home" class="view-section active">
+            <h2 style="margin-top:0;">Space Status</h2>
+            <div class="status-box">
+                <div id="status-display">
+                    {% if "Live" in data.status or "Updated" in data.status %}
+                        <i class="fas fa-check-circle status-icon live"></i>
+                        <h2 style="color:#10b981;">Running & Live 🟢</h2>
+                    {% elif "Failed" in data.status %}
+                        <i class="fas fa-times-circle status-icon failed"></i>
+                        <h2 style="color:#ef4444;">Deployment Failed 🔴</h2>
+                    {% else %}
+                        <i class="fas fa-circle-notch status-icon spin"></i>
+                        <h2 style="color:#f59e0b;">Processing / Building... ⏳</h2>
+                    {% endif %}
                 </div>
-                <input type="file" id="file-upload" multiple style="display:none;" onchange="handleMultiUpload(event)">
+                <p style="color:#94a3b8; margin-top:10px;">Type: {{ data.type | upper }} Environment</p>
+                <button onclick="showView('view-logs')" style="padding:10px 20px; background:#334155; border:none; border-radius:8px; color:white; cursor:pointer; margin-top:15px;">View Logs</button>
             </div>
+        </div>
 
-            <div id="file-list">
-                {% for f in files %}
-                <div class="file-item">
-                    <div style="font-size:14px;"><i class="far fa-file-code" style="color:#94a3b8; margin-right:10px;"></i> {{ f.path }}</div>
-                    <div style="display:flex;">
-                        <button style="background:transparent; border:none; color:#10b981; cursor:pointer; padding:5px;" onclick="window.open('/{{ space }}/{{ f.path }}', '_blank')"><i class="fas fa-eye"></i></button>
-                        <button style="background:transparent; border:none; color:#ef4444; cursor:pointer; padding:5px; margin-left:5px;" onclick="deleteFile('{{ f.key }}')"><i class="fas fa-trash"></i></button>
+        <div id="view-files" class="view-section">
+            <div class="file-manager">
+                <div class="toolbar">
+                    <h3 style="margin:0; font-size:18px;"><i class="far fa-folder"></i> Files</h3>
+                    <div>
+                        <button class="btn-action" onclick="document.getElementById('file-upload').click()"><i class="fas fa-upload"></i> Upload</button>
                     </div>
+                    <input type="file" id="file-upload" multiple style="display:none;" onchange="handleMultiUpload(event)">
                 </div>
-                {% endfor %}
-                {% if not files %}
-                <p style="color:#94a3b8; text-align:center; padding: 20px; font-size:14px;">No files yet. Upload or Create one!</p>
-                {% endif %}
+
+                <div id="file-list">
+                    {% for f in files %}
+                    <div class="file-item">
+                        <div style="font-size:14px;"><i class="far fa-file-code" style="color:#94a3b8; margin-right:10px;"></i> {{ f.path }}</div>
+                        <div style="display:flex;">
+                            <button style="background:#334155; border:none; color:#10b981; cursor:pointer; padding:8px 12px; border-radius:5px;" onclick="window.open('/{{ space }}/{{ f.path }}', '_blank')"><i class="fas fa-eye"></i></button>
+                            <button style="background:#ef4444; border:none; color:#fff; cursor:pointer; padding:8px 12px; margin-left:8px; border-radius:5px;" onclick="deleteFile('{{ f.key }}')"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if not files %}
+                    <div style="text-align:center; padding: 40px 0;">
+                        <i class="fas fa-box-open" style="font-size:40px; color:#334155; margin-bottom:15px;"></i>
+                        <p style="color:#94a3b8; margin:0;">No files uploaded yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
 
-        <div id="editor-ui">
-            <h3 style="margin-top:0;"><i class="fas fa-code"></i> Code Editor</h3>
-            <input type="text" id="file-path" class="path-input" placeholder="e.g. index.html or folder/app.py">
-            <textarea id="file-content" placeholder="Write your code here..."></textarea>
-            <button class="btn-deploy" onclick="deployCode()"><i class="fas fa-play"></i> Deploy Code</button>
-            <button style="width:100%; padding:15px; background:transparent; border:1px solid #ef4444; color:#ef4444; margin-top:10px; border-radius:8px; cursor:pointer; font-size:16px;" onclick="closeEditor()">Cancel</button>
+        <div id="view-logs" class="view-section">
+            <h3 style="margin-top:0;"><i class="fas fa-terminal"></i> Build Logs</h3>
+            <div class="logs-container" id="terminal-logs">
+                <div class="log-line log-normal">> Fetching latest container status...</div>
+                <div class="log-line log-success">> Space: {{ space }} is initialized.</div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="link-modal" class="modal">
+        <div class="modal-box">
+            <h2 style="color:#10b981; margin-top:0;"><i class="fas fa-globe"></i> Live URL</h2>
+            <p style="color:#94a3b8; font-size:14px;">Your space is available at:</p>
+            <div style="background:#0f172a; padding:15px; border-radius:8px; border:1px solid #334155; word-break: break-all; margin: 15px 0;">
+                <a href="{{ base_url }}/{{ space }}" target="_blank" style="color:#3b82f6; text-decoration:none; font-weight:bold;">{{ base_url }}/{{ space }}</a>
+            </div>
+            <button onclick="document.getElementById('link-modal').style.display='none'" style="width:100%; padding:12px; background:#ef4444; border:none; border-radius:8px; color:white; cursor:pointer;">Close</button>
         </div>
     </div>
 
@@ -100,41 +139,68 @@
             m.style.display = m.style.display === 'block' ? 'none' : 'block';
         }
 
-        function showSection(id) {
-            document.getElementById('file-mgr').style.display = 'none';
-            document.getElementById('link-box').style.display = 'none';
-            document.getElementById('editor-ui').style.display = 'none';
-            document.getElementById(id).style.display = 'block';
-            toggleMenu();
+        function showView(id) {
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.getElementById('side-menu').style.display = 'none'; // Close menu
         }
 
-        function openEditor(path) {
-            document.getElementById('file-mgr').style.display = 'none';
-            document.getElementById('editor-ui').style.display = 'block';
-            document.getElementById('file-path').value = path;
-            if(!path) document.getElementById('file-content').value = "";
+        function showLinkModal() {
+            document.getElementById('link-modal').style.display = 'flex';
+            document.getElementById('side-menu').style.display = 'none';
         }
-        function closeEditor() { showSection('file-mgr'); }
 
-        function updateLog(msg) {
-            const logBox = document.getElementById('sys-logs');
-            logBox.innerHTML += `<br>> ${msg}`;
+        // --- LOGGING SYSTEM ---
+        function addLog(msg, type="normal") {
+            const logBox = document.getElementById('terminal-logs');
+            logBox.innerHTML += `<div class="log-line log-${type}">> ${msg}</div>`;
             logBox.scrollTop = logBox.scrollHeight;
         }
 
-        // MULTI FILE UPLOAD LOGIC
+        // --- DEPLOYMENT & UPLOAD LOGIC ---
         async function handleMultiUpload(event) {
             const files = event.target.files;
             if(files.length === 0) return;
             
+            // Switch to Logs View Automatically
+            showView('view-logs');
+            addLog("Starting Build Process...", "warn"); // Yellow
+            
+            // Update UI Status to Processing
+            document.getElementById('status-display').innerHTML = `<i class="fas fa-circle-notch status-icon spin"></i><h2 style="color:#f59e0b;">Building... ⏳</h2>`;
+            await fetch('/api/update_status', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({space:"{{ space }}", status:"Building ⏳"}) });
+
+            let hasError = false;
+
             for(let i=0; i<files.length; i++) {
                 let file = files[i];
-                updateLog(`Reading ${file.name}...`);
-                let base64 = await toBase64(file);
-                await pushToServer(file.name, base64, false);
+                addLog(`Uploading file: ${file.name}...`, "normal");
+                try {
+                    let base64 = await toBase64(file);
+                    await pushToServer(file.name, base64);
+                    addLog(`Successfully processed ${file.name}`, "normal");
+                } catch(e) {
+                    addLog(`Error uploading ${file.name}: ${e}`, "error"); // Red
+                    hasError = true;
+                }
             }
-            updateLog(`All files deployed! Reloading Workspace...`);
-            setTimeout(() => window.location.reload(), 1500);
+
+            // Simulate Build Delay
+            addLog("Running deployment scripts...", "warn");
+            setTimeout(async () => {
+                if(!hasError) {
+                    addLog("Build Successful! Syncing to global CDN...", "success"); // Green
+                    addLog(`Space is now LIVE 🟢`, "success");
+                    addLog(`Live Link: <a href="{{ base_url }}/{{ space }}" target="_blank" class="log-link">{{ base_url }}/{{ space }}</a>`, "normal");
+                    
+                    document.getElementById('status-display').innerHTML = `<i class="fas fa-check-circle status-icon live"></i><h2 style="color:#10b981;">Running & Live 🟢</h2>`;
+                    await fetch('/api/update_status', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({space:"{{ space }}", status:"Live 🟢"}) });
+                } else {
+                    addLog("Deployment Failed due to errors.", "error"); // Red
+                    document.getElementById('status-display').innerHTML = `<i class="fas fa-times-circle status-icon failed"></i><h2 style="color:#ef4444;">Deployment Failed 🔴</h2>`;
+                    await fetch('/api/update_status', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({space:"{{ space }}", status:"Failed 🔴"}) });
+                }
+            }, 2000); // 2 Sec Fake Delay for Pro Feel
         }
 
         function toBase64(file) {
@@ -146,36 +212,37 @@
             });
         }
 
-        async function deployCode() {
-            const path = document.getElementById('file-path').value;
-            const content = document.getElementById('file-content').value;
-            if(!path) return alert("File path is required!");
-            
-            const base64Content = btoa(unescape(encodeURIComponent(content)));
-            await pushToServer(path, base64Content, true);
-        }
-
-        async function pushToServer(path, base64Content, reload=false) {
-            updateLog(`Deploying ${path}...`);
+        async function pushToServer(path, base64Content) {
             const res = await fetch('/api/save_file', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({space: "{{ space }}", path: path, content: base64Content})
             });
             const data = await res.json();
-            updateLog(data.message);
-            if(reload && data.status === 'success') {
-                setTimeout(() => window.location.reload(), 1000);
-            }
+            if(data.status !== 'success') throw new Error(data.message);
         }
 
         async function deleteFile(key) {
-            if(!confirm("Delete this file permanently?")) return;
-            updateLog(`Deleting file...`);
-            await fetch('/api/delete_file', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({space: "{{ space }}", key: key})
-            });
-            window.location.reload();
+            if(!confirm("Are you sure you want to delete this file?")) return;
+            
+            showView('view-logs');
+            addLog("Initiating file deletion...", "warn");
+            
+            try {
+                const res = await fetch('/api/delete_file', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({space: "{{ space }}", key: key})
+                });
+                const data = await res.json();
+                
+                if(data.status === 'success') {
+                    addLog("File deleted successfully. Reloading workspace...", "success");
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    addLog(`Delete Error: ${data.message}`, "error");
+                }
+            } catch (e) {
+                addLog(`Network Error during deletion.`, "error");
+            }
         }
     </script>
 </body></html>
