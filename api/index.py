@@ -28,10 +28,13 @@ def db_get(path):
 def db_put(path, data):
     requests.put(f"{DB_URL}/{path}.json", json=data)
 
+def db_patch(path, data):
+    requests.patch(f"{DB_URL}/{path}.json", json=data)
+
 def db_delete(path):
     requests.delete(f"{DB_URL}/{path}.json")
 
-# Encode path for safe Firebase Key (removes / and .)
+# Encode path for safe Firebase Key
 def encode_path(path):
     return base64.urlsafe_b64encode(path.encode()).decode().rstrip('=')
 
@@ -60,8 +63,6 @@ def auth():
 def dashboard():
     if 'uid' not in session: return redirect('/')
     uid = session['uid']
-    
-    # Fetch user's spaces
     all_spaces = db_get("spaces") or {}
     my_spaces = {k: v for k, v in all_spaces.items() if v.get('uid') == uid}
     return render_template('dashboard.html', spaces=my_spaces)
@@ -69,25 +70,26 @@ def dashboard():
 @app.route('/api/create_space', methods=['POST'])
 def create_space():
     if 'uid' not in session: return jsonify({"error": "Unauthorized"}), 401
-    name = request.json.get('name').lower().strip()
-    type_ = request.json.get('type') # 'python' or 'html'
+    name = request.json.get('name').lower().strip() # BUG FIXED: Lowercase mapping
+    type_ = request.json.get('type')
     
-    if name in ['api', 'dashboard', 'static', 'admin', 'auth']:
+    if name in ['api', 'dashboard', 'static', 'admin', 'auth', 'workspace', 'checkout']:
         return jsonify({"status": "error", "message": "Reserved name!"})
         
     if db_get(f"spaces/{name}"):
         return jsonify({"status": "error", "message": "Space name already taken!"})
         
-    db_put(f"spaces/{name}", {"uid": session['uid'], "type": type_, "status": "Building...", "created": int(time.time())})
-    return jsonify({"status": "success"})
+    db_put(f"spaces/{name}", {"uid": session['uid'], "type": type_, "status": "Running 🟢", "created": int(time.time())})
+    return jsonify({"status": "success", "space": name}) # Returning exact name for redirect
 
-# --- HUGGING FACE STYLE WORKSPACE ---
+# --- FILE MANAGER WORKSPACE ---
 @app.route('/workspace/<space_name>')
 def workspace(space_name):
     if 'uid' not in session: return redirect('/')
     space_data = db_get(f"spaces/{space_name}")
+    
     if not space_data or space_data['uid'] != session['uid']:
-        return "Unauthorized or Not Found", 404
+        return "Unauthorized or Space Not Found. Please create it first.", 404
         
     files = db_get(f"space_files/{space_name}") or {}
     file_list = [{"path": v['path'], "key": k} for k, v in files.items()]
@@ -108,8 +110,8 @@ def save_file():
         "content": content,
         "updated": int(time.time())
     })
-    db_patch(f"spaces/{space}", {"status": "Running 🟢"})
-    return jsonify({"status": "success", "message": f"Deployed {path} successfully!"})
+    db_patch(f"spaces/{space}", {"status": "Updated & Live 🟢"})
+    return jsonify({"status": "success", "message": f"Deployed {path}!"})
 
 @app.route('/api/delete_file', methods=['POST'])
 def delete_file():
@@ -119,30 +121,28 @@ def delete_file():
     db_delete(f"space_files/{space}/{key}")
     return jsonify({"status": "success", "message": "File deleted."})
 
-# --- LIVE HOSTING SYSTEM (domain.com/space/path) ---
+# --- LIVE HOSTING SYSTEM ---
 @app.route('/<space_name>')
 @app.route('/<space_name>/<path:file_path>')
 def serve_file(space_name, file_path="index.html"):
     space_data = db_get(f"spaces/{space_name}")
-    if not space_data: return "404 Space Not Found", 404
+    if not space_data: return f"<h1>404 Space Not Found</h1>", 404
     
-    # Try exact path, if not found try adding .html or looking for main.py
     safe_key = encode_path(file_path)
     file_data = db_get(f"space_files/{space_name}/{safe_key}")
     
     if not file_data and file_path == "index.html":
-        # Fallback for python spaces
         file_data = db_get(f"space_files/{space_name}/{encode_path('main.py')}")
 
     if file_data:
         content = base64.b64decode(file_data['content'])
         mime_type, _ = mimetypes.guess_type(file_path)
         if file_data['path'].endswith('.py'):
-            mime_type = "text/plain" # Display python code as text
+            mime_type = "text/plain"
             
-        return Response(content, mimetype=mime_type or "text/plain")
+        return Response(content, mimetype=mime_type or "text/html")
         
-    return f"404 File '{file_path}' Not Found in {space_name}", 404
+    return f"404 File '{file_path}' Not Found", 404
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
